@@ -51,7 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Try to get location from IP
       final locationData = await _prayerService.getLocationFromIP();
       final city = locationData['city'];
       final country = locationData['country'];
@@ -62,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
         _locationMessage = "$city, $country";
       });
 
-      // Fetch calendar prayer times
       final times = await _prayerService.getCalendarTimes(
         latitude: lat,
         longitude: lon,
@@ -106,16 +104,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final now = DateTime.now();
     final todayStr = DateFormat('dd-MM-yyyy').format(now);
 
-    // Find today's prayers
     PrayerTimes? today;
     try {
       today = times.firstWhere((p) => p.date == todayStr);
     } catch (e) {
-      // If not found (maybe date format mismatch or timezone issue), take the first one or handle error
-      // API returns DD-MM-YYYY, DateFormat returns DD-MM-YYYY. Should match.
-      // Fallback: check if list is not empty
       if (times.isNotEmpty) {
-        // Simple fallback: find the one with matching day
         today = times.firstWhere((p) => int.parse(p.date.split('-')[0]) == now.day, orElse: () => times.first);
       }
     }
@@ -181,11 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
       'Yatsı': _parseTime(_todayPrayers!.isha),
     };
 
-    // Find the next prayer
     String? nextName;
     DateTime? nextTime;
 
-    // Sort prayers by time
     final sortedPrayers = prayers.entries.toList()
       ..sort((a, b) => a.value.compareTo(b.value));
 
@@ -197,7 +188,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    // If no prayer left today, next is Fajr tomorrow
     if (nextName == null) {
       nextName = 'İmsak';
       nextTime = prayers['İmsak']!.add(const Duration(days: 1));
@@ -233,9 +223,9 @@ class _HomeScreenState extends State<HomeScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF1A237E), // Deep Indigo
-              Color(0xFF3949AB), // Lighter Indigo
-              Color(0xFF8C9EFF), // Accent Blue
+              Color(0xFF1A237E),
+              Color(0xFF3949AB),
+              Color(0xFF8C9EFF),
             ],
           ),
         ),
@@ -262,19 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 children: [
                                   const SizedBox(height: 24),
                                   _buildTodayHorizontalList(),
-                                  const SizedBox(height: 24),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                                    child: Text(
-                                      "Gelecek Günler",
-                                      style: GoogleFonts.outfit(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 32),
                                   _buildForecastList(),
                                   const SizedBox(height: 24),
                                 ],
@@ -349,24 +327,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 32),
           if (_timeUntilNextPrayer != null) ...[
-            Text(
-              "Vaktin Çıkmasına",
-              style: GoogleFonts.outfit(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _formatDuration(_timeUntilNextPrayer!),
-              style: GoogleFonts.outfit(
-                color: Colors.white,
-                fontSize: 64,
-                fontWeight: FontWeight.bold,
-                height: 1,
-              ),
-            ),
-            const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
@@ -380,6 +340,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _formatDuration(_timeUntilNextPrayer!),
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 64,
+                fontWeight: FontWeight.bold,
+                height: 1,
+                fontFeatures: const [
+                  FontFeature.tabularFigures(),
+                ],
               ),
             ),
           ],
@@ -401,122 +374,167 @@ class _HomeScreenState extends State<HomeScreen> {
       {'name': 'Yatsı', 'time': _todayPrayers!.isha},
     ];
 
-    return SizedBox(
-      height: 110,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        scrollDirection: Axis.horizontal,
-        itemCount: prayers.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final p = prayers[index];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: prayers.map((p) {
           final isNext = _nextPrayerName == p['name'];
           
-          return Container(
-            width: 80,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            decoration: BoxDecoration(
-              color: isNext ? const Color(0xFF1A237E) : Colors.grey[100],
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: isNext ? [
-                BoxShadow(
-                  color: const Color(0xFF1A237E).withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                )
-              ] : null,
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  p['name']!,
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    color: isNext ? Colors.white70 : Colors.black54,
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: isNext ? const Color(0xFF1A237E) : Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: isNext ? [
+                  BoxShadow(
+                    color: const Color(0xFF1A237E).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ] : null,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    p['name']!,
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: isNext ? Colors.white70 : Colors.black54,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  p['time']!,
-                  style: GoogleFonts.outfit(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isNext ? Colors.white : Colors.black87,
+                  const SizedBox(height: 6),
+                  Text(
+                    p['time']!,
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isNext ? Colors.white : Colors.black87,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
-        },
+        }).toList(),
       ),
     );
   }
 
   Widget _buildForecastList() {
-    // Filter for next 7 days
     final now = DateTime.now();
     final todayStr = DateFormat('dd-MM-yyyy').format(now);
     
-    // Find index of today
     int startIndex = _calendarPrayers.indexWhere((p) => p.date == todayStr);
     if (startIndex == -1) startIndex = 0;
 
-    // Take next 7 days starting from tomorrow
+    // Get next 7 days starting from tomorrow
     final forecast = _calendarPrayers.skip(startIndex + 1).take(7).toList();
 
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: forecast.length,
-      separatorBuilder: (context, index) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final day = forecast[index];
-        // Parse date to get day name
-        final dateParts = day.date.split('-');
-        final date = DateTime(int.parse(dateParts[2]), int.parse(dateParts[1]), int.parse(dateParts[0]));
-        final dayName = DateFormat('EEEE', 'tr_TR').format(date);
+    if (forecast.isEmpty) return const SizedBox();
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header row
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
           child: Row(
             children: [
-              SizedBox(
-                width: 100,
-                child: Text(
-                  dayName,
-                  style: GoogleFonts.outfit(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
+              const SizedBox(width: 80),
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildForecastTime(day.fajr),
-                    _buildForecastTime(day.dhuhr),
-                    _buildForecastTime(day.asr),
-                    _buildForecastTime(day.maghrib),
-                    _buildForecastTime(day.isha),
+                    _buildHeaderLabel('İmsak'),
+                    _buildHeaderLabel('Güneş'),
+                    _buildHeaderLabel('Öğle'),
+                    _buildHeaderLabel('İkindi'),
+                    _buildHeaderLabel('Akşam'),
+                    _buildHeaderLabel('Yatsı'),
                   ],
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+        const Divider(height: 1),
+        ListView.separated(
+          padding: const EdgeInsets.fromLTRB(20, 0, 24, 0),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: forecast.length,
+          separatorBuilder: (context, index) => const Divider(height: 1),
+          itemBuilder: (context, index) {
+            final day = forecast[index];
+            final dateParts = day.date.split('-');
+            final date = DateTime(int.parse(dateParts[2]), int.parse(dateParts[1]), int.parse(dateParts[0]));
+            final dayName = DateFormat('EEEE', 'tr_TR').format(date);
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      dayName,
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildForecastTime(day.fajr),
+                        _buildForecastTime(day.sunrise),
+                        _buildForecastTime(day.dhuhr),
+                        _buildForecastTime(day.asr),
+                        _buildForecastTime(day.maghrib),
+                        _buildForecastTime(day.isha),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeaderLabel(String label) {
+    return SizedBox(
+      width: 38,
+      child: Text(
+        label,
+        style: GoogleFonts.outfit(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: Colors.black45,
+        ),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 
   Widget _buildForecastTime(String time) {
-    return Text(
-      time,
-      style: GoogleFonts.outfit(
-        fontSize: 14,
-        color: Colors.black54,
+    return SizedBox(
+      width: 38,
+      child: Text(
+        time,
+        style: GoogleFonts.outfit(
+          fontSize: 12,
+          color: Colors.black54,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }
